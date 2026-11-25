@@ -1,0 +1,1407 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Otimização Operacional de ETA via MILP — USP ICMC 2026</title>
+<style>
+  :root {
+    --navy: #0f172a;
+    --navy-soft: #1e293b;
+    --blue: #006699;
+    --blue-dark: #0b5394;
+    --blue-light: #e0f2fe;
+    --blue-pale: #f0f9ff;
+    --orange: #d96b00;
+    --orange-light: #fff7ed;
+    --green: #15803d;
+    --green-light: #f0fdf4;
+    --red: #b91c1c;
+    --red-light: #fef2f2;
+    --slate: #475569;
+    --muted: #64748b;
+    --border: #e2e8f0;
+    --bg: #f8fafc;
+    --white: #ffffff;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: #0f172a;
+    color: var(--navy);
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Viewport wrapper for exact 16:9 scaling */
+  .deck-viewport {
+    position: relative;
+    width: 1280px;
+    height: 720px;
+    transform-origin: center center;
+    box-shadow: 0 25px 70px rgba(0, 0, 0, 0.55);
+    border-radius: 6px;
+    overflow: hidden;
+    background: var(--white);
+  }
+
+  .slide {
+    position: absolute;
+    inset: 0;
+    width: 1280px;
+    height: 720px;
+    background: var(--white);
+    padding: 36px 52px 54px 52px;
+    display: none;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .slide.active {
+    display: flex;
+  }
+
+  /* Cover slide */
+  .slide.cover {
+    background: linear-gradient(135deg, #ffffff 0%, #f0f9ff 58%, #e0f2fe 100%);
+    padding: 46px 58px 54px 58px;
+  }
+
+  .eyebrow {
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    color: var(--blue);
+    margin-bottom: 6px;
+  }
+
+  .eyebrow.orange { color: var(--orange); }
+
+  h1.cover-title {
+    font-size: 38px;
+    line-height: 1.18;
+    font-weight: 800;
+    color: var(--navy);
+    margin-bottom: 16px;
+  }
+
+  h2.slide-title {
+    font-size: 28px;
+    line-height: 1.18;
+    font-weight: 800;
+    color: var(--navy);
+    margin-bottom: 6px;
+  }
+
+  .subtitle {
+    font-size: 15.5px;
+    color: var(--slate);
+    line-height: 1.4;
+    margin-bottom: 16px;
+  }
+
+  .content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 16px;
+    min-height: 0;
+  }
+
+  .footer {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 38px;
+    padding: 0 52px;
+    border-top: 1px solid var(--border);
+    background: #fafcff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 500;
+  }
+
+  .footer .page-num {
+    font-weight: 700;
+    color: var(--blue-dark);
+  }
+
+  /* Grids & Cards */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+  .grid-2-asym { display: grid; grid-template-columns: 1.08fr 0.92fr; gap: 24px; align-items: center; }
+  .grid-2-right { display: grid; grid-template-columns: 0.92fr 1.08fr; gap: 24px; align-items: center; }
+  .grid-2-flow { display: grid; grid-template-columns: 0.72fr 1.28fr; gap: 28px; align-items: center; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+
+  .card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+  }
+
+  .card.blue { background: var(--blue-pale); border-color: #bae6fd; }
+  .card.orange { background: var(--orange-light); border-color: #fed7aa; }
+  .card.green { background: var(--green-light); border-color: #bbf7d0; }
+  .card.white { background: var(--white); border-color: var(--border); }
+
+  .card-label {
+    font-size: 11.5px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--blue);
+    margin-bottom: 8px;
+  }
+  .card-label.orange { color: var(--orange); }
+  .card-label.green { color: var(--green); }
+
+  .kpi-value {
+    font-size: 34px;
+    font-weight: 900;
+    color: var(--blue-dark);
+    line-height: 1.1;
+    margin-bottom: 6px;
+  }
+  .kpi-value.orange { color: var(--orange); }
+  .kpi-value.green { color: var(--green); }
+
+  .kpi-title {
+    font-size: 14.5px;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 4px;
+  }
+
+  .kpi-desc {
+    font-size: 13px;
+    color: var(--slate);
+    line-height: 1.4;
+  }
+
+  .banner {
+    background: var(--navy);
+    color: var(--white);
+    border-radius: 12px;
+    padding: 15px 22px;
+    font-size: 14px;
+    line-height: 1.45;
+  }
+  .banner strong { color: #7dd3fc; }
+  .banner.blue { background: var(--blue-dark); }
+  .banner.blue strong { color: #fde68a; }
+  .banner.soft {
+    background: var(--blue-pale);
+    color: var(--navy);
+    border-left: 5px solid var(--blue);
+  }
+  .banner.soft strong { color: var(--blue-dark); }
+  .banner.green-soft {
+    background: var(--green-light);
+    color: var(--navy);
+    border-left: 5px solid var(--green);
+  }
+  .banner.green-soft strong { color: var(--green); }
+
+  /* Numbered flow steps */
+  .step-list { display: flex; flex-direction: column; gap: 12px; }
+  .step-item {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+  }
+  .step-badge {
+    min-width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--blue);
+    color: var(--white);
+    font-weight: 800;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 1px;
+    flex-shrink: 0;
+  }
+  .step-badge.orange { background: var(--orange); }
+  .step-badge.green { background: var(--green); }
+  .step-item h4 { font-size: 14.5px; font-weight: 700; color: var(--navy); margin-bottom: 2px; }
+  .step-item p { font-size: 13px; color: var(--slate); line-height: 1.38; }
+
+  /* Horizontal row flow item (Slide 3) */
+  .flow-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 13px 18px;
+  }
+  .flow-row .flow-name {
+    min-width: 175px;
+    font-size: 15.5px;
+    font-weight: 800;
+    color: var(--navy);
+  }
+  .flow-row .flow-desc {
+    font-size: 14px;
+    color: var(--slate);
+    line-height: 1.35;
+  }
+
+  /* Icon stat card (Slide 9) */
+  .icon-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  .icon-stat {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .icon-stat img {
+    height: 26px;
+    width: auto;
+    object-fit: contain;
+    align-self: flex-start;
+  }
+  .icon-stat .stat-main {
+    font-size: 15.5px;
+    font-weight: 800;
+    color: var(--navy);
+  }
+  .icon-stat .stat-sub {
+    font-size: 12.5px;
+    color: var(--slate);
+    font-weight: 500;
+  }
+
+  /* Math formatting */
+  .math-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--blue);
+    border-radius: 8px;
+    padding: 11px 15px;
+    font-size: 14px;
+    line-height: 1.45;
+  }
+  .math-box.orange { border-left-color: var(--orange); }
+  .math-eq {
+    font-family: "Cambria Math", "STIX Two Math", Georgia, serif;
+    font-size: 17px;
+    color: var(--navy);
+    font-weight: 600;
+    margin-top: 4px;
+  }
+  .math-eq.red { color: var(--red); }
+  .math-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    font-size: 14px;
+    color: var(--navy-soft);
+    line-height: 1.42;
+  }
+  .math-list li strong { color: var(--blue-dark); font-family: Georgia, serif; }
+
+  /* Tables */
+  table.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.06);
+  }
+  table.data-table th {
+    background: var(--navy);
+    color: var(--white);
+    text-align: left;
+    padding: 11px 14px;
+    font-size: 12px;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+  }
+  table.data-table th.num, table.data-table td.num { text-align: right; }
+  table.data-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    color: var(--navy-soft);
+  }
+  table.data-table tr:nth-child(even) td { background: #f8fafc; }
+  table.data-table tr.highlight td {
+    background: #e0f2fe;
+    font-weight: 700;
+    color: var(--navy);
+  }
+  table.data-table tr.highlight-green td {
+    background: #dcfce7;
+    font-weight: 700;
+    color: #14532d;
+  }
+
+  .pill {
+    display: inline-block;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 700;
+  }
+  .pill.green { background: #dcfce7; color: #166534; }
+  .pill.blue { background: #dbeafe; color: #1e40af; }
+  .pill.orange { background: #ffedd5; color: #9a3412; }
+  .pill.gray { background: #e2e8f0; color: #334155; }
+
+  /* Images */
+  .img-frame {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .img-frame img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    display: block;
+  }
+  .img-panel-title {
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--navy);
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .img-panel-title .dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+  .img-caption {
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 6px;
+    text-align: center;
+  }
+
+  /* Cover question highlight */
+  .cover-question {
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid #bae6fd;
+    border-left: 5px solid var(--blue);
+    border-radius: 12px;
+    padding: 18px 24px;
+    font-size: 21px;
+    color: var(--blue-dark);
+    font-weight: 700;
+    line-height: 1.4;
+    max-width: 820px;
+    box-shadow: 0 6px 20px rgba(0, 102, 153, 0.08);
+  }
+
+  /* Navigation controls (hidden on print) */
+  .nav-bar {
+    position: fixed;
+    bottom: 14px;
+    right: 18px;
+    z-index: 999;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(15, 23, 42, 0.85);
+    backdrop-filter: blur(8px);
+    padding: 6px 12px;
+    border-radius: 999px;
+    color: #fff;
+    font-size: 12.5px;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+  }
+  .nav-bar button {
+    background: rgba(255, 255, 255, 0.14);
+    border: none;
+    color: #fff;
+    padding: 5px 10px;
+    border-radius: 999px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .nav-bar button:hover { background: rgba(255, 255, 255, 0.28); }
+  .nav-bar .counter { min-width: 54px; text-align: center; font-weight: 700; }
+
+  /* Exact 16:9 print-to-PDF */
+  @page {
+    size: 1280px 720px;
+    margin: 0;
+  }
+  @media print {
+    html, body {
+      background: #fff;
+      overflow: visible;
+      display: block;
+      height: auto;
+      width: 1280px;
+      margin: 0;
+      padding: 0;
+    }
+    .nav-bar { display: none !important; }
+    .deck-viewport {
+      width: 1280px;
+      height: auto;
+      transform: none !important;
+      box-shadow: none;
+      border-radius: 0;
+      overflow: visible;
+    }
+    .slide {
+      display: flex !important;
+      position: relative !important;
+      page-break-after: always;
+      break-after: page;
+      page-break-inside: avoid;
+      break-inside: avoid;
+      width: 1280px;
+      height: 720px;
+      padding: 36px 52px 54px 52px;
+      overflow: hidden;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .slide.cover {
+      padding: 46px 58px 54px 58px;
+    }
+    .slide:last-child {
+      page-break-after: auto;
+      break-after: auto;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="deck-viewport" id="deck">
+
+  <!-- SLIDE 01: CAPA -->
+  <section class="slide cover active">
+    <div style="display:flex; flex-direction:column; height:100%; justify-content:space-between; position:relative;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:24px;">
+        <div class="eyebrow" style="font-size:14px; margin-top:4px;">USP · ICMC · PESQUISA OPERACIONAL · 2026</div>
+        <img src="../img/slides_22/slide_01_logo.png" alt="Logo ICMC-USP São Carlos" style="height:105px; width:auto; object-fit:contain;" />
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:24px; max-width:980px; margin-top:-18px;">
+        <h1 class="cover-title" style="font-size:40px; margin-bottom:0;">
+          Otimização Operacional do Agendamento de Bombas e Distribuição de Água Tratada via Programação Linear Inteira Mista (MILP)
+        </h1>
+        <div class="cover-question">
+          Como usar reservatórios para deslocar o bombeamento para períodos de menor custo energético?
+        </div>
+      </div>
+
+      <div style="border-top:2px solid var(--blue); padding-top:16px; display:flex; justify-content:space-between; align-items:flex-end;">
+        <div>
+          <div style="font-size:16px; color:var(--navy); font-weight:700;">
+            Felipe de Mattos Bracale · Jheimis Fernandes Marques · Luciano Severino da Silva
+          </div>
+          <div style="font-size:13.5px; color:var(--muted); margin-top:4px;">
+            MAI5032 — Tópicos em Pesquisa Operacional · MECAI / ICMC-USP
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="footer">
+      <span>USP – São Carlos – ICMC · Pesquisa Operacional · 2026</span>
+      <span class="page-num">01/19</span>
+    </div>
+  </section>
+
+  <!-- SLIDE 02: CONTEXTO -->
+  <section class="slide">
+    <div>
+      <div class="eyebrow">CONTEXTO</div>
+      <h2 class="slide-title">Como atender à demanda sem pagar caro pela energia?</h2>
+      <p class="subtitle">Bombas precisam operar continuamente ao longo do dia, a demanda varia e o preço da energia dispara no "horário de ponta".</p>
+    </div>
+    <div class="content">
+      <div class="grid-3">
+        <div class="card blue">
+          <div class="card-label">Operação contínua</div>
+          <div class="kpi-title">Abastecimento ininterrupto</div>
+          <p class="kpi-desc">Setores urbanos consomem água 24 h por dia, com picos fortes pela manhã e no fim da tarde (banhos e retorno da praia).</p>
+        </div>
+        <div class="card orange">
+          <div class="card-label orange">Tarifa horossazonal</div>
+          <div class="kpi-title">Tarifa mais cara</div>
+          <p class="kpi-desc">Justamente no pico de demanda hídrica o custo energético tem seu maior valor, impossibilitando a simples parada ou diminuição de uso sem um planejamento adequado.</p>
+        </div>
+        <div class="card green">
+          <div class="card-label green">Bateria hídrica</div>
+          <div class="kpi-title">Reservatórios como estoque</div>
+          <p class="kpi-desc">Armazenar água nas horas baratas permite reduzir drasticamente o bombeamento no horário de ponta sem faltar água.</p>
+        </div>
+      </div>
+      <div class="banner soft">
+        <strong>Horário de ponta:</strong> intervalo de 3 horas consecutivas (18h00 às 20h59 na concessão modelada) em que a rede elétrica atinge seu pico de carga e a tarifa (R$/kWh) sofre acréscimo expressivo.
+      </div>
+    </div>
+    <div class="footer">
+      <span>USP – São Carlos – ICMC · Pesquisa Operacional · 2026</span>
+      <span class="page-num">02/19</span>
+    </div>
+  </section>
+
+  <!-- SLIDE 03: PROBLEMA -->
+  <section class="slide">
+    <div>
+      <div class="eyebrow">1 · PROBLEMA</div>
+      <h2 class="slide-title">Como o abastecimento é organizado hoje?</h2>
+      <p class="subtitle">Visão operacional: fonte de abastecimento, recalque, armazenamento e distribuição por gravidade aos setores.</p>
+    </div>
+    <div class="content" style="gap:14px;">
+      <div class="grid-2-flow" style="flex:1; min-height:0;">
+        <div class="img-frame" style="height:410px; padding:10px;">
+          <img src="../img/slides_22/slide_03_fluxo.png" alt="Diagrama conceitual do fluxo físico do sistema" />
+        </div>
+        <div style="display:flex; flex-direction:column; gap:12px;">
+          <div class="card-label" style="margin-bottom:2px; font-size:12.5px;">FLUXO FÍSICO</div>
+          <div class="flow-row">
+            <div class="step-badge">1</div>
+            <div class="flow-name">ETA</div>
+            <div class="flow-desc">Fonte de água tratada</div>
+          </div>
+          <div class="flow-row">
+            <div class="step-badge orange">2</div>
+            <div class="flow-name">Motobombas</div>
+            <div class="flow-desc">Recalcam água para reservatórios</div>
+          </div>
+          <div class="flow-row">
+            <div class="step-badge green">3</div>
+            <div class="flow-name">Reservatórios</div>
+            <div class="flow-desc">Compensam os picos e armazenam água</div>
+          </div>
+          <div class="flow-row">
+            <div class="step-badge" style="background:var(--red);">4</div>
+            <div class="flow-name">Setores urbanos</div>
+            <div class="flow-desc">Consomem água conforme a demanda</div>
+          </div>
+        </div>
+      </div>
+      <div class="banner soft" style="padding:11px 18px; font-size:13.8px;">
+        <strong>Motivação do projeto:</strong> sair de uma programação intuitiva/reativa para um agendamento matemático otimizado que coordene bombeamento e reservação ao longo das 24 horas.
+      </div>
+    </div>
+    <div class="footer">
+      <span>USP – São Carlos – ICMC · Pesquisa Operacional · 2026</span>
+      <span class="page-num">03/19</span>
+    </div>
+  </section>
+
+  <!-- SLIDE 04: MOTIVAÇÃO -->
+  <section class="slide">
+    <div>
+      <div class="eyebrow">2 · MOTIVAÇÃO</div>
+      <h2 class="slide-title">Por que otimizar?</h2>
+      <p class="subtitle">A programação de bombas precisa conciliar custo tarifário, curva de demanda e segurança dos reservatórios.</p>
+    </div>
+    <div class="content">
+      <div class="grid-3">
+        <div class="card orange">
+          <div class="kpi-value orange">3,1×</div>
+          <div class="kpi-title">Diferença tarifária</div>
+          <p class="kpi-desc">R$ 1,4048/kWh na ponta (18h00 às 20h59) vs. R$ 0,4525/kWh fora de ponta.</p>
+        </div>
+        <div class="card blue">
+          <div class="kpi-value">9.400 m³/h</div>
+          <div class="kpi-title">Limite de produção da ETA</div>
+          <p class="kpi-desc">O pico horário de demanda (17.663 m³/h às 18h) ultrapassa a capacidade instantânea da ETA.</p>
+        </div>
+        <div class="card green">
+          <div class="kpi-value green">39.900 m³</div>
+          <div class="kpi-title">Capacidade útil de reservação</div>
+          <p class="kpi-desc">Os 5 reservatórios permitem transferir volume entre horários, aliviando o bombeamento na ponta.</p>
+        </div>
+      </div>
+      <div class="banner blue">
+        <strong>OPORTUNIDADE:</strong> Priorizar o bombeamento quando a tarifa é menor, encher os reservatórios antes das 18h e reduzir o acionamento na ponta sem deixar de atender nenhum setor.<br />
+        <span style="opacity:0.92; font-size:13.5px;">A meta é reduzir o <strong>custo financeiro (R$)</strong> da energia — não necessariamente reduzir o consumo total em kWh.</span>
+      </div>
+    </div>
+    <div class="footer">
+      <span>USP – São Carlos – ICMC · Pesquisa Operacional · 2026</span>
+      <span class="page-num">04/19</span>
+    </div>
+  </section>
+
+  <!-- SLIDE 05: OBJETIVOS -->
+  <section class="slide">
+    <div>
+      <div class="eyebrow">3 · OBJETIVOS</div>
+      <h2 class="slide-title">O que o estudo pretende demonstrar?</h2>
+      <p class="subtitle">Formular e resolver via MILP o agendamento de bombas para reduzir o custo diário de energia.</p>
+    </div>
+    <div class="content">
+      <div class="card blue" style="padding:20px 24px;">
+        <div class="card-label">OBJETIVO GERAL</div>
+        <div style="font-size:19px; font-weight:800; color:var(--navy); line-height:1.35;">
+          Determinar um agendamento de bombeamento minuto a minuto que minimize o custo tarifário diário respeitando integralmente todas as restrições físicas e de segurança da rede.
+        </div>
+      </div>
+      <div class="grid-4">
+        <div class="card white">
+          <div class="card-label">Específico 1</div>
+          <div class="kpi-title">Balanço Hídrico Exato</div>
+          <p class="kpi-desc">Conservação de massa por período em cada um dos 5 reservatórios.</p>
+        </div>
+        <div class="card white">
+          <div class="card-label orange">Específico 2</div>
+          <div class="kpi-title">Limites Reais de Bomba</div>
+          <p class="kpi-desc">Vazão mínima e máxima nominais respeitadas em cada acionamento.</p>
+        </div>
+        <div class="card white">
+          <div class="card-label">Específico 3</div>
+          <div class="kpi-title">Discretização por Minuto</div>
+          <p class="kpi-desc">1.440 passos de 1 min sem inviabilidade.</p>
+        </div>
+        <div class="card white">
+          <div class="card-label orange">Específico 4</div>
+          <div class="kpi-title">Benchmark de Solvers</div>
+          <p class="kpi-desc">Comparação sistemática entre HiGHS, CBC e Gurobi (Pyomo e python-mip).</p>
+        </div>
+      </div>
+    </div>
+    <div class="footer">
+      <span>USP – São Carlos – ICMC · Pesquisa Operacional · 2026</span>
+      <span class="page-num">05/19</span>
+    </div>
+  </section>
+
+  <!-- SLIDE 06: TOPOLOGIA DO MACRO-SETOR -->
+  <section class="slide">
+    <div>
+      <div class="eyebrow">4 · MODELAGEM DO SISTEMA</div>
+      <h2 class="slide-title">Topologia do macro-setor simulado</h2>
+      <p class="subtitle">Sub-rede calibrada com dados do SINISA 2024 e PMSB de Santos — cenário de estresse de verão litorâneo.</p>
+    </div>
+    <div class="content">
+      <div class="grid-2-right" style="height:100%;">
+        <div style="display:flex; flex-direction:column; gap:14px;">
+          <div class="icon-stat-grid">
+            <div class="icon-stat">
+              <img src="../img/slides_22/icon_eta.png" alt="ETA" />
+              <div class="stat-main">1 ETA</div>
+              <div class="stat-sub">Nó fonte: 9.400 m³/h</div>
+            </div>
+            <div class="icon-stat">
+              <img src="../img/slides_22/icon_bombas.png" alt="Motobombas" />
+              <div class="stat-main">6 motobombas</div>
+              <div class="stat-sub">10 arcos de recalque</div>
+            </div>
+            <div class="icon-stat">
+              <img src="../img/slides_22/icon_reservatorios.png" alt="Reservatórios" />
+              <div class="stat-main">5 reservatórios</div>
+              <div class="stat-sub">Nível de segurança 15%</div>
+            </div>
+            <div class="icon-stat">
+              <img src="../img/slides_22/icon_setores.png" alt="Setores urbanos" />
+              <div class="stat-main">12 setores urbanos</div>
+              <div class="stat-sub">18 arcos atendidos por gravidade</div>
+            </div>
+          </div>
+          <div class="card blue">
+            <div class="card-label">CENÁRIO DE ESTRESSE (VERÃO)</div>
+            <p class="kpi-desc" style="font-size:13.5px; color:var(--navy-soft);">
+              • Demanda diária total: <strong>199.488 m³/dia</strong> (88% da capacidade produtiva diária da ETA).<br />
+              • Pico horário às 18h: <strong>17.663 m³/h</strong> (quase 2× a capacidade instantânea da ETA).<br />
+              • Nível inicial de 30% e reserva mínima obrigatória de <strong>15%</strong> em todos os reservatórios.
+            </p>
+          </div>
+        </div>
+        <div class="img-frame" style="height:495px;">
+          <img src="../img/diagrama_eta.png" alt="Diagrama da topologia do macro-setor" />
+        </div>
+      </div>
+    </div>
+    <div class="footer">
+      <span>USP – São Carlos – ICMC · Pesquisa Operacional · 2026</span>
+      <span class="page-num">06/19</span>
+    </div>
+  </section>
+
+  <!-- SLIDE 07: FORMULAÇÃO — CONJUNTOS E PARÂMETROS -->
+  <section class="slide">
+    <div>
+      <div class="eyebrow">5 · FORMULAÇÃO MATEMÁTICA</div>
+      <h2 class="slide-title">Conjuntos, índices e parâmetros</h2>
+      <p class="subtitle">Definição formal dos elementos da rede e dos dados operacionais e tarifários do horizonte diário.</p>
+    </div>
+    <div class="content">
+      <div class="grid-2">
+        <div class="card blue">
+          <div class="card-label">CONJUNTOS E ÍNDICES</div>
+          <ul class="math-list" style="gap:12px;">
+            <li>• <strong><em>t</em> ∈ 𝒯 = {1, …, 1440}:</strong> intervalos de 1 minuto ao longo das 24 h (Δt = 1/60 h).</li>
+            <li>• <strong><em>p</em> ∈ 𝒫 = {1, …, 6}:</strong> conjunto das 6 motobombas da ETA.</li>
+            <li>• <strong><em>r</em> ∈ ℛ = {1, …, 5}:</strong> conjunto dos 5 reservatórios de distribuição.</li>
+            <li>• <strong><em>d</em> ∈ 𝒟 = {1, …, 12}:</strong> conjunto dos 12 setores consumidores (bairros).</li>
+            <li>• <strong><em>A</em><sub>PR</sub> e <em>A</em><sub>RD</sub>:</strong> arcos permitidos bomba → reservatório (10) e reservatório → setor (18).</li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="card-label orange">PARÂMETROS</div>
+          <ul class="math-list" style="gap:10px;">
+            <li>• <strong><em>C</em><sub>t</sub>:</strong> tarifa vigente no minuto <em>t</em> (R$/kWh).</li>
+            <li>• <strong><em>P</em><sub>p</sub>:</strong> potência nominal da motobomba <em>p</em> ligada (190 a 450 kW).</li>
+            <li>• <strong><em>Q</em><sub>p</sub><sup>min</sup>, <em>Q</em><sub>p</sub><sup>max</sup>:</strong> faixa operacional de vazão da bomba <em>p</em> (m³/h).</li>
+            <li>• <strong><em>D</em><sub>d,t</sub>:</strong> demanda do setor <em>d</em> no minuto <em>t</em> (m³/h; média diária 8.312 m³/h).</li>
+            <li>• <strong><em>Q</em><sub>ETA</sub><sup>max</sup> = 9.400 m³/h:</strong> limite agregado de produção da ETA.</li>
+            <li>• <strong><em>V</em><sub>r</sub><sup>min</sup>, <em>V</em><sub>r</sub><sup>max</sup>, <em>V</em><sub>r,0</sub>:</strong> reserva mínima (15%), capacidade máxima e volume inicial (30%).</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="footer">
+      <span>USP – São Carlos – ICMC · Pesquisa Operacional · 2026</span>
+      <span class="page-num">07/19</span>
+    </div>
+  </section>
+
+  <!-- SLIDE 08: FORMULAÇÃO — VARIÁVEIS E F.O. -->
+  <section class="slide">
+    <div>
+      <div class="eyebrow">5 · FORMULAÇÃO MATEMÁTICA</div>
+      <h2 class="slide-title">Variáveis de decisão e função objetivo</h2>
+      <p class="subtitle">Decisões binárias de acionamento combinadas com variáveis contínuas de vazão e armazenamento.</p>
+    </div>
+    <div class="content">
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-label">VARIÁVEIS DE DECISÃO</div>
+          <ul class="math-list" style="gap:13px;">
+            <li>• <strong><em>x</em><sub>p,t</sub> ∈ {0, 1}:</strong> bomba <em>p</em> ligada (1) ou desligada (0) no minuto <em>t</em>.</li>
+            <li>• <strong><em>q</em><sub>p,t</sub> ≥ 0:</strong> vazão total da bomba <em>p</em> no minuto <em>t</em> <em>(expressão linear de f<sup>PR</sup> no modelo enxuto)</em>.</li>
+            <li>• <strong><em>f</em><sub>p,r,t</sub><sup>PR</sup> ≥ 0:</strong> fluxo da bomba <em>p</em> → reservatório <em>r</em> no minuto <em>t</em>.</li>
+            <li>• <strong><em>f</em><sub>r,d,t</sub><sup>RD</sup> ≥ 0:</strong> fluxo do reservatório <em>r</em> → setor <em>d</em> no minuto <em>t</em>.</li>
+            <li>• <strong><em>V</em><sub>r,t</sub> ≥ 0:</strong> volume armazenado no reservatório <em>r</em> ao final do minuto <em>t</em> (m³).</li>
+          </ul>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:16px;">
+          <div class="card blue" style="padding:20px;">
+            <div class="card-label">FUNÇÃO OBJETIVO</div>
+            <div class="math-eq" style="font-size:21px; margin:8px 0 10px 0;">
+              min &nbsp; <em>Z</em> = ∑<sub>t</sub> ∑<sub>p</sub> ( <em>C</em><sub>t</sub> × <em>P</em><sub>p</sub> × <em>x</em><sub>p,t</sub> × Δ<em>t</em> )
+            </div>
+            <p class="kpi-desc">Minimiza o custo diário de energia elétrica aplicando a tarifa vigente <em>C</em><sub>t</sub> a cada minuto de bomba ligada (Δt = 1/60 h).</p>
+          </div>
+          <div class="card orange">
+            <div class="card-label orange">NATUREZA DO PROBLEMA</div>
+            <p class="kpi-desc" style="font-size:13.8px; color:var(--navy-soft);">
+              O modelo decide simultaneamente <strong>QUANDO</strong> ligar cada bomba, <strong>QUANTO</strong> bombear e <strong>POR QUAL ROTA</strong> distribuir. Todas as equações são lineares; as 8.640 variáveis binárias <strong><em>x</em><sub>p,t</sub></strong> caracterizam um <strong>MILP</strong>.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="footer">
+      <span>USP – São Carlos – ICMC · Pesquisa Operacional · 2026</span>
+      <span class="page-num">08/19</span>
+    </div>
+  </section>
+
+  <!-- SLIDE 09: FORMULAÇÃO — RESTRIÇÕES -->
+  <section class="slide">
+    <div>
+      <div class="eyebrow">5 · FORMULAÇÃO MATEMÁTICA</div>
+      <h2 class="slide-title">Restrições do sistema</h2>
+      <p class="subtitle">O custo só pode ser reduzido respeitando rigorosamente os limites físicos de bombas, rede e reservatórios.</p>
+    </div>
+    <div class="content">
+      <div class="grid-2" style="gap:14px;">
+        <div class="math-box">
+          <strong>1 · Operação da bomba (faixa nominal)</strong>
+          <div class="math-eq"><em>Q</em><sub>p</sub><sup>min</sup> × <em>x</em><sub>p,t</sub> &nbsp;≤&nbsp; <em>q</em><sub>p,t</sub> &nbsp;≤&nbsp; <em>Q</em><sub>p</sub><sup>max</sup> × <em>x</em><sub>p,t</sub></div>
+        </div>
+        <div class="math-box">
+          <strong>2 · Conservação de fluxo nos arcos de recalque</strong>
+          <div class="math-eq"><em>q</em><sub>p,t</sub> &nbsp;=&nbsp; ∑<sub>r : (p,r)</sub> <em>f</em><sub>p,r,t</sub><sup>PR</sup></div>
+        </div>
+        <div class="math-box">
+          <strong>3 · Atendimento integral da demanda</strong>
+          <div class="math-eq">∑<sub>r : (r,d)</sub> <em>f</em><sub>r,d,t</sub><sup>RD</sup> &nbsp;=&nbsp; <em>D</em><sub>d,t</sub></div>
+        </div>
+        <div class="math-box">
+          <strong>4 · Capacidade máxima de produção da ETA</strong>
+          <div class="math-eq">∑<sub>p</sub> <em>q</em><sub>p,t</sub> &nbsp;≤&nbsp; <em>Q</em><sub>ETA</sub><sup>max</sup></div>
+        </div>
+        <div class="math-box">
+          <strong>5 · Balanço hídrico dos reservatórios</strong>
+          <div class="math-eq"><em>V</em><sub>r,t</sub> &nbsp;=&nbsp; <em>V</em><sub>r,t−1</sub> + ( entradas − <em>saídas</em> ) × Δ<em>t</em></div>
+        </div>
+        <div class="math-box">
+          <strong>6 · Limites de segurança e recuperação diária</strong>
+          <div class="math-eq"><em>V</em><sub>r</sub><sup>min</sup> ≤ <em>V</em><sub>r,t</sub> ≤ <em>V</em><sub>r</sub><sup>max</sup> &nbsp;&nbsp;e&nbsp;&nbsp; <em>V</em><sub>r,final</sub> ≥ <em>V</em><sub>r,0</sub></div>
+        </div>
+      </div>
+      <div class="banner soft" style="padding:11px 18px; font-size:13.5px;">
+        <strong>Formulação enxuta (notebook otimizado):</strong> a restrição 2 é substituída diretamente por uma <code>Expression</code> em Pyomo, e a restrição 6 é aplicada nos <em>bounds</em> das variáveis <code>V</code>, eliminando 23.045 linhas redundantes antes mesmo do <em>presolve</em>.
+      </div>
+    </div>
+    <div class="footer">
+      <span>USP – São Carlos – ICMC · Pesquisa Operacional · 2026</span>
+      <span class="page-num">09/19</span>
+    </div>
+  </section>
+
+  <!-- SLIDE 10: IMPLEMENTAÇÃO -->
+  <section class="slide">
+    <div>
+      <div class="eyebrow">6 · IMPLEMENTAÇÃO</div>
+      <h2 class="slide-title">Arquitetura computacional: Pyomo + solvers MILP</h2>
+      <p class="subtitle">Implementação em Jupyter Notebook (Python 3.12 · Pyomo 6.11.0) com comparação entre formulação base e enxuta.</p>
+    </div>
+    <div class="content">
+      <div class="grid-3">
+        <div class="card blue">
+          <div class="card-label">Stack &amp; Solvers</div>
+          <div class="kpi-title">Pyomo 6.11 + HiGHS 1.16</div>
+          <p class="kpi-desc">Solvers avaliados: <strong>HiGHS</strong>, <strong>CBC</strong> e <strong>Gurobi</strong>, nas interfaces Pyomo e python-mip.</p>
+        </div>
+        <div class="card orange">
+          <div class="card-label orange">Formulação Enxuta</div>
+          <div class="kpi-title">−35% de restrições</div>
+          <p class="kpi-desc">Base: 64.800 variáveis e 66.245 restrições.<br />Enxuta: <strong>56.160 variáveis</strong> (8.640 bin.) e <strong>43.200 restrições</strong>.</p>
+        </div>
+        <div class="card green">
+          <div class="card-label green">Aceleração &amp; Telemetria</div>
+          <div class="kpi-title">Warm Start + Callbacks</div>
+          <p class="kpi-desc">Inicialização hierárquica (60 min → 1 min) + rastreamento via <code>cbMipLogging</code> e <code>cbMipImprovingSolution</code>.</p>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-label">MÉTODO DE SOLUÇÃO</div>
+          <div class="kpi-title" style="margin-bottom:6px;">Branch-and-bound / branch-and-cut</div>
+          <p class="kpi-desc" style="font-size:13.8px; color:var(--navy-soft);">
+            Combina ramificação nas 8.640 decisões binárias com relaxações lineares (LP), geração de planos de corte e heurísticas primais. Critério de qualidade: <strong>incumbente + limite inferior + gap relativo</strong>.
+          </p>
+        </div>
+        <div class="card">
+          <div class="card-label orange">PARÂMETROS DO HiGHS</div>
+          <p class="kpi-desc" style="font-size:14px; color:var(--navy-soft); line-height:1.75; margin-top:6px;">
+            • Gap-alvo: <code>mip_rel_gap = 0,3%</code> · <code>mip_detect_symmetry = True</code><br />
+            • Heurísticas: <code>mip_heuristic_effort = 0,10</code> · <code>shifting = True</code>
+          </p>
+        </div>
+      </div>
+    </div>
+    <div class="footer">
+      <span>USP – São Carlos – ICMC · Pesquisa Operacional · 2026</span>
+      <span class="page-num">10/19</span>
+    </div>
+  </section>
+
+  <!-- SLIDE 11: BENCHMARK 24 PERÍODOS -->
+  <section class="slide">
+    <div>
+      <div class="eyebrow">7 · BENCHMARK · 24 PERÍODOS</div>
+      <h2 class="slide-title">Modelo horário: comparação entre solvers</h2>
+      <p class="subtitle">Horizonte de 24 h (144 variáveis binárias), limite de 300 s e gap-alvo de 0,3%.</p>
+    </div>
+    <div class="content">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Modelador / Solver</th>
+            <th class="num">Tempo</th>
+            <th class="num">Incumbente</th>
+            <th class="num">Limite Inferior</th>
+            <th class="num">Gap</th>
+            <th>Resultado</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Pyomo / HiGHS</td>
+            <td class="num">27,18 s</td>
+            <td class="num">R$ 10.733,27</td>
+            <td class="num">R$ 10.701,07</td>
+            <td class="num">0,30%</td>
+            <td><span class="pill green">Ótimo</span></td>
+          </tr>
+          <tr>
+            <td>Pyomo / CBC</td>
+            <td class="num">86,98 s</td>
+            <td class="num">R$ 10.724,22</td>
+            <td class="num">R$ 10.701,30</td>
+            <td class="num">0,21%</td>
+            <td><span class="pill green">Ótimo</span></td>
+          </tr>
+          <tr class="highlight">
+            <td>Pyomo / Gurobi</td>
+            <td class="num">2,02 s</td>
+            <td class="num">R$ 10.738,27</td>
+            <td class="num">R$ 10.707,73</td>
+            <td class="num">0,28%</td>
+            <td><span class="pill green">Ótimo</span></td>
+          </tr>
+          <tr>
+            <td>python-mip / HiGHS</td>
+            <td class="num">23,01 s</td>
+            <td class="num">R$ 10.728,74</td>
+            <td class="num">R$ 10.697,37</td>
+            <td class="num">0,29%</td>
+            <td><span class="pill green">Ótimo</span></td>
+          </tr>
+          <tr class="highlight-green">
+            <td>python-mip / CBC</td>
+            <td class="num">4,96 s</td>
+            <td class="num">R$ 10.724,22</td>
+            <td class="num">R$ 10.700,27</td>
+            <td class="num">0,22%</td>
+            <td><span class="pill green">Ótimo</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="banner soft">
+        <strong>Conclusão no modelo horário:</strong> todos os solvers atingem o ótimo dentro da tolerância de 0,3% rapidamente — Gurobi em <strong>2,02 s</strong> e python-mip/CBC em <strong>4,96 s</strong>. Esse desempenho rápido é a base para o <strong>Warm Start</strong> do modelo minuto a minuto.
+      </div>
+    </div>
+    <div class="footer">
+      <span>USP – São Carlos – ICMC · Pesquisa Operacional · 2026</span>
+      <span class="page-num">11/19</span>
+    </div>
+  </section>
+
+  <!-- SLIDE 12: BENCHMARK 1.440 INTERVALOS -->
+  <section class="slide">
+    <div>
+      <div class="eyebrow">7 · BENCHMARK · 1.440 INTERVALOS</div>
+      <h2 class="slide-title">Modelo minuto a minuto: Pyomo e python-mip (HiGHS vs. CBC)</h2>
+      <p class="subtitle">Horizonte de 1.440 passos (8.640 binárias) para limites de 5 min e 1 h. Gurobi Free excede o limite de licença.</p>
+    </div>
+    <div class="content" style="gap:12px;">
+      <table class="data-table" style="font-size:13.2px;">
+        <thead>
+          <tr>
+            <th>Modelador / Solver</th>
+            <th class="num">Limite</th>
+            <th class="num">Incumbente</th>
+            <th class="num">Limite Inferior</th>
+            <th class="num">Gap Final</th>
+            <th>Observação</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Pyomo / CBC (cold start)</td>
+            <td class="num">1 h</td>
+            <td class="num">R$ 11.119,73</td>
+            <td class="num">R$ 10.692,50</td>
+            <td class="num">3,84%</td>
+            <td><span class="pill gray">Limite de tempo</span></td>
+          </tr>
+          <tr>
+            <td>python-mip / CBC (cold start)</td>
+            <td class="num">1 h</td>
+            <td class="num">R$ 11.054,51</td>
+            <td class="num">R$ 10.692,62</td>
+            <td class="num">3,27%</td>
+            <td><span class="pill gray">Limite de tempo</span></td>
+          </tr>
+          <tr>
+            <td>python-mip / HiGHS (cold start)</td>
+            <td class="num">1 h</td>
+            <td class="num">R$ 10.931,02</td>
+            <td class="num">R$ 10.677,65</td>
+            <td class="num">2,32%</td>
+            <td><span class="pill gray">Limite de tempo</span></td>
+          </tr>
+          <tr>
+            <td>Pyomo / HiGHS (cold start)</td>
+            <td class="num">1 h</td>
+            <td class="num">R$ 10.923,72</td>
+            <td class="num">R$ 10.678,57</td>
+            <td class="num">2,24%</td>
+            <td><span class="pill orange">Melhor cold start</span></td>
+          </tr>
+          <tr>
+            <td>Pyomo / CBC (Enxuto + Warm Start)</td>
+            <td class="num">1 h</td>
+            <td class="num">R$ 10.747,79</td>
+            <td class="num">R$ 10.676,45</td>
+            <td class="num">0,66%</td>
+            <td><span class="pill blue">−83% no gap</span></td>
+          </tr>
+          <tr>
+            <td>python-mip / CBC (Enxuto + Warm Start)</td>
+            <td class="num">5 min</td>
+            <td class="num">R$ 10.733,27</td>
+            <td class="num">R$ 10.676,32</td>
+            <td class="num">0,53%</td>
+            <td><span class="pill blue">−84% · em 5 min</span></td>
+          </tr>
+          <tr class="highlight">
+            <td>python-mip / HiGHS (Enxuto + Warm Start)</td>
+            <td class="num">5 min</td>
+            <td class="num">R$ 10.719,69</td>
+            <td class="num">R$ 10.676,55</td>
+            <td class="num">0,40%</td>
+            <td><span class="pill blue">−83% · em 5 min</span></td>
+          </tr>
+          <tr class="highlight-green">
+            <td>Pyomo / HiGHS (Enxuto + Warm Start)</td>
+            <td class="num">1 h</td>
+            <td class="num">R$ 10.719,69</td>
+            <td class="num">R$ 10.678,83</td>
+            <td class="num">0,38%</td>
+            <td><span class="pill green">−83% no gap · Melhor</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="banner soft" style="padding:11px 18px; font-size:13.5px;">
+        <strong>Diagnóstico:</strong> Em <em>cold start</em>, CBC (3,84%) e HiGHS (2,24%) desperdiçam 1 h na simetria intra-hora. Com <strong>formulação enxuta + warm start</strong>, ambos reduzem o gap em ~83% — e o <strong>HiGHS atinge 0,40% já em 5 min e 0,38% em 1 h (R$ 10.719,69)</strong>!
+      </div>
+    </div>
+    <div class="footer">
+      <span>USP – São Carlos – ICMC · Pesquisa Operacional · 2026</span>
+      <span class="page-num">12/19</span>
+    </div>
+  </section>
+
+  <!-- SLIDE 13: BENCHMARK HIGHS DETALHADO -->
+  <section class="slide">
+    <div>
+      <div class="eyebrow">7 · BENCHMARK · HiGHS DETALHADO</div>
+      <h2 class="slide-title">Evolução de incumbente, limite inferior e gap ao longo de 1 hora</h2>
+      <p class="subtitle">Dados reais do cenário Santos (verão) — comparando busca a frio (<em>cold start</em>) vs. modelo enxuto com <em>warm start</em>.</p>
+    </div>
+    <div class="content" style="gap:10px;">
+      <div class="img-frame" style="height:435px; padding:6px;">
+        <img src="../img/progresso_highs_warmstart.png" alt="Evolução Cold Start vs Warm Start no HiGHS" />
+      </div>
+      <div class="grid-3">
+        <div class="card orange" style="padding:10px 14px;">
+          <div style="font-size:12px; font-weight:800; color:var(--orange);">COLD START · 5 MIN</div>
+          <div style="font-size:15px; font-weight:800; color:var(--navy);">R$ 11.272,83 · gap 5,29%</div>
+        </div>
+        <div class="card orange" style="padding:10px 14px;">
+          <div style="font-size:12px; font-weight:800; color:var(--orange);">COLD START · 1 HORA</div>
+          <div style="font-size:15px; font-weight:800; color:var(--navy);">R$ 10.923,72 · gap 2,24%</div>
+        </div>
+        <div class="card green" style="padding:10px 14px;">
+          <div style="font-size:12px; font-weight:800; color:var(--green);">ENXUTO + WARM START · 6 MIN → 1 H</div>
+          <div style="font-size:15px; font-weight:800; color:var(--green);">R$ 10.780,88 · gap 0,97% → 0,95%</div>
+        </div>
+      </div>
+    </div>
+    <div class="footer">
+      <span>USP – São Carlos – ICMC · Pesquisa Operacional · 2026</span>
+      <span class="page-num">13/19</span>
+    </div>
+  </section>
+
+  <!-- SLIDE 14: WARM START — MECÂNICA + IMPACTO UNIFICADO -->
+  <section class="slide">
+    <div>
+      <div class="eyebrow orange">7 · ACELERAÇÃO DO SOLVER · WARM START HIERÁRQUICO</div>
+      <h2 class="slide-title">Como o Warm Start acelera o Branch-and-Cut sem perder exatidão?</h2>
+      <p class="subtitle" style="margin-bottom:10px;">Estratégia de agregação → desagregação temporal que fornece uma incumbente viável de alta qualidade já no segundo zero.</p>
+    </div>
+    <div class="content" style="gap:11px;">
+      <div class="grid-2" style="gap:18px; align-items:stretch;">
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <div class="card-label" style="margin-bottom:0;">PIPELINE DE INICIALIZAÇÃO (AGREGAÇÃO → DESAGREGAÇÃO)</div>
+          <div class="step-item" style="padding:10px 14px;">
+            <div class="step-badge">1</div>
+            <div>
+              <h4 style="font-size:13.8px;">Modelo Agregado (Δt = 60 min)</h4>
+              <p style="font-size:12.5px;">Resolve o mesmo MILP com apenas <strong>144 binárias</strong> (60× menos variáveis) em poucos segundos (<strong>5–27 s</strong>), sem simetria intra-hora.</p>
+            </div>
+          </div>
+          <div class="step-item" style="padding:10px 14px;">
+            <div class="step-badge green">2</div>
+            <div>
+              <h4 style="font-size:13.8px;">Injeção no Solver (<code>warmstart=True</code>)</h4>
+              <p style="font-size:12.5px;">O solver valida a solução em <strong>0,17 s</strong> e inicializa o limite superior já em <strong>U<sub>0</sub> = R$ 10.719,69</strong> (vs. U<sub>0</sub> = +∞ no <em>cold start</em>).</p>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <div class="card-label orange" style="margin-bottom:0;">O QUE OCORRE DENTRO DO ALGORITMO MILP</div>
+          <div class="card blue" style="padding:10px 14px;">
+            <div class="kpi-title" style="font-size:13.8px;">1. Poda precoce por limite (<em>Pruning by Bound</em>)</div>
+            <p class="kpi-desc" style="font-size:12.5px;">Qualquer nó cuja relaxação linear tenha custo ≥ U<sub>0</sub> é descartado imediatamente, cortando subárvores ruins no topo da árvore.</p>
+          </div>
+          <div class="card orange" style="padding:10px 14px;">
+            <div class="kpi-title" style="font-size:13.8px;">2. Fixação por custo reduzido (<em>Reduced-Cost Fixing</em>)</div>
+            <p class="kpi-desc" style="font-size:12.5px;">A folga inicial (U<sub>0</sub> − L<sub>0</sub>) cai de <strong>~R$ 1.760</strong> para <strong>~R$ 43</strong> no nó raiz, permitindo fixar variáveis binárias subótimas logo na raiz.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-2" style="gap:18px;">
+        <div class="card green" style="padding:14px 18px;">
+          <div class="kpi-value green" style="font-size:28px; margin-bottom:4px;">2,24% → 0,38%</div>
+          <div class="kpi-title" style="font-size:14px;">Redução de 83% no gap</div>
+          <p class="kpi-desc" style="font-size:12.5px;">Em 1 h: <strong>HiGHS</strong> cai de 2,24% → <strong>0,38%</strong> (R$ 10.719,69) e <strong>CBC</strong> cai de 3,84% → <strong>0,66%</strong> (R$ 10.747,79; 0,53% no python-mip em 5 min).</p>
+        </div>
+        <div class="card orange" style="padding:14px 18px;">
+          <div class="kpi-value orange" style="font-size:28px; margin-bottom:4px;">5 min</div>
+          <div class="kpi-title" style="font-size:14px;">Já bate 1 h de <em>cold start</em></div>
+          <p class="kpi-desc" style="font-size:12.5px;">Em apenas <strong>5 minutos</strong>, o HiGHS (Pyomo e python-mip) atinge <strong>R$ 10.719,69</strong> e <strong>0,40%</strong> de gap (5,6× menor que 1 h de <em>cold start</em>).</p>
+        </div>
+      </div>
+
+      <div class="banner blue" style="padding:10px 18px; font-size:12.8px;">
+        <strong>GARANTIA DE EXATIDÃO PRESERVADA:</strong> O <em>warm start</em> <strong>não restringe o espaço de busca nem gera ótimo local</strong> — ele apenas entrega um teto superior válido U<sub>0</sub>. O Branch-and-Cut permanece 100% exato e livre para encontrar qualquer solução minuto a minuto mais barata.
+      </div>
+    </div>
+    <div class="footer">
+      <span>USP – São Carlos – ICMC · Pesquisa Operacional · 2026</span>
+      <span class="page-num">14/19</span>
+    </div>
+  </section>
+
+  <!-- SLIDE 15: RESULTADOS — RESERVATÓRIOS -->
+  <section class="slide">
+    <div>
+      <div class="eyebrow">8 · RESULTADOS · RESERVATÓRIOS</div>
+      <h2 class="slide-title">Dinâmica dos reservatórios: Cenário-Base vs. Otimizado</h2>
+      <p class="subtitle">Na otimização tarifária, os reservatórios são carregados até 100% antes das 18h para absorver o horário de ponta.</p>
+    </div>
+    <div class="content" style="gap:12px;">
+      <div class="grid-2" style="gap:16px;">
+        <div style="display:flex; flex-direction:column;">
+          <div class="img-panel-title"><span class="dot" style="background:var(--orange);"></span>Cenário-Base</div>
+          <div class="img-frame" style="height:400px;">
+            <img src="../img/reservatorio_base_highs_otimizado.png.png" alt="Nível dos reservatórios — Cenário-base" />
+            <div class="img-caption">Cenário-base (tarifa fixa): operação sem preparo coordenado para a ponta</div>
+          </div>
+        </div>
+        <div style="display:flex; flex-direction:column;">
+          <div class="img-panel-title"><span class="dot" style="background:var(--green);"></span>Otimizado</div>
+          <div class="img-frame" style="height:400px;">
+            <img src="../img/reservatorio_warm_highs_otimizado.png.png" alt="Nível dos reservatórios — Otimização tarifária" />
+            <div class="img-caption">Otimização tarifária (HiGHS 1 h): carga até 100% às 17h e descarga controlada na ponta</div>
+          </div>
+        </div>
+      </div>
+      <div class="banner green-soft" style="padding:11px 18px; font-size:13.5px;">
+        <strong>Segurança operacional:</strong> todos os 5 reservatórios respeitam estritamente a reserva mínima de <strong>15%</strong> e recuperam integralmente o nível inicial (<strong>30%</strong>) às 24h.
+      </div>
+    </div>
+    <div class="footer">
+      <span>USP – São Carlos – ICMC · Pesquisa Operacional · 2026</span>
+      <span class="page-num">15/19</span>
+    </div>
+  </section>
+
+  <!-- SLIDE 16: RESULTADOS — BOMBEAMENTO -->
+  <section class="slide">
+    <div>
+      <div class="eyebrow">8 · RESULTADOS · BOMBEAMENTO</div>
+      <h2 class="slide-title">Perfil de bombeamento: Cenário-Base vs. Otimizado</h2>
+      <p class="subtitle">Deslocamento do bombeamento para fora do horário de ponta (18h00–20h59), reduzindo drasticamente a vazão na tarifa cara.</p>
+    </div>
+    <div class="content" style="gap:12px;">
+      <div class="grid-2" style="gap:16px;">
+        <div style="display:flex; flex-direction:column;">
+          <div class="img-panel-title"><span class="dot" style="background:var(--orange);"></span>Cenário-Base</div>
+          <div class="img-frame" style="height:400px;">
+            <img src="../img/bombeamento_base_highs_otimizado.jpg" alt="Perfil de bombeamento — Cenário-base" />
+            <div class="img-caption">Cenário-base: bombeamento no teto da ETA (9.400 m³/h) durante todas as 3 h de ponta</div>
+          </div>
+        </div>
+        <div style="display:flex; flex-direction:column;">
+          <div class="img-panel-title"><span class="dot" style="background:var(--blue);"></span>Otimizado</div>
+          <div class="img-frame" style="height:400px;">
+            <img src="../img/bombeamento_warm_highs_otimizado.jpg" alt="Perfil de bombeamento — Otimização tarifária" />
+            <div class="img-caption">Otimização tarifária: forte queda no bombeamento durante a ponta (~7.000 → ~4.200 m³/h)</div>
+          </div>
+        </div>
+      </div>
+      <div class="banner soft" style="padding:11px 18px; font-size:13.5px;">
+        <strong>Efeito da arbitragem tarifária:</strong> a ETA opera perto de 9.400 m³/h nas horas baratas (pré-carga) e reduz em mais de <strong>50%</strong> a vazão bombeada entre 19h e 21h, sem comprometer os 12 setores.
+      </div>
+    </div>
+    <div class="footer">
+      <span>USP – São Carlos – ICMC · Pesquisa Operacional · 2026</span>
+      <span class="page-num">16/19</span>
+    </div>
+  </section>
+
+  <!-- SLIDE 17: CONCLUSÃO — IMPACTO ECONÔMICO -->
+  <section class="slide">
+    <div>
+      <div class="eyebrow">9 · CONCLUSÃO · IMPACTO ECONÔMICO</div>
+      <h2 class="slide-title">O ganho vem de deslocar o consumo para horas baratas</h2>
+      <p class="subtitle">Comparação em execução de 1 hora (modelo minuto a minuto otimizado + warm start · tarifas horárias reais).</p>
+    </div>
+    <div class="content">
+      <div class="grid-2" style="gap:24px;">
+        <div class="card orange" style="padding:26px;">
+          <div class="card-label orange">CENÁRIO-BASE ÓTIMO (TARIFA FIXA)</div>
+          <div class="kpi-value orange" style="font-size:42px; margin:8px 0;">R$ 12.076,01</div>
+          <div style="font-size:14.5px; font-weight:700; color:var(--navy); margin-bottom:10px;">
+            Consumo: 20.500,00 kWh/dia
+          </div>
+          <p class="kpi-desc" style="font-size:14px;">
+            Bombeamento reativo: acompanha a demanda na ponta operando no limite da ETA (9.400 m³/h) quando a tarifa está 3,1× mais cara.
+          </p>
+        </div>
+        <div class="card green" style="padding:26px;">
+          <div class="card-label green">OTIMIZAÇÃO · HiGHS (1 H + WARM START)</div>
+          <div class="kpi-value green" style="font-size:42px; margin:8px 0;">R$ 10.719,69</div>
+          <div style="font-size:14.5px; font-weight:700; color:var(--navy); margin-bottom:10px;">
+            HiGHS: gap 0,38% (20.500 kWh)
+          </div>
+          <p class="kpi-desc" style="font-size:14px;">
+            Mesma energia diária, mas migrada para fora da ponta usando os reservatórios como baterias hídricas — com solução a menos de 1% do ótimo global.
+          </p>
+        </div>
+      </div>
+
+      <div class="banner" style="background:linear-gradient(90deg, #0b5394 0%, #15803d 100%); display:flex; align-items:center; justify-content:space-between; padding:20px 28px;">
+        <div>
+          <div style="font-size:12px; letter-spacing:1.2px; text-transform:uppercase; opacity:0.9; font-weight:700;">ECONOMIA FINANCEIRA DIÁRIA (SOBRE O BASE ÓTIMO)</div>
+          <div style="font-size:32px; font-weight:900; color:#ffffff; margin-top:2px;">R$ 1.356,32 / dia &nbsp; (11,23%)</div>
+        </div>
+        <div style="text-align:right; font-size:14px; line-height:1.45; max-width:440px;">
+          <strong>~R$ 40 mil/mês (~R$ 488 mil/ano em regime similar)</strong><br />
+          com <strong>0% de corte de demanda</strong> e <strong>mesmo consumo em kWh</strong>.
+        </div>
+      </div>
+    </div>
+    <div class="footer">
+      <span>USP – São Carlos – ICMC · Pesquisa Operacional · 2026</span>
+      <span class="page-num">17/19</span>
+    </div>
+  </section>
+
+  <!-- SLIDE 18: REFERÊNCIAS -->
+  <section class="slide">
+    <div>
+      <div class="eyebrow">REFERÊNCIAS</div>
+      <h2 class="slide-title">Base teórica, formulação, dados e implementação</h2>
+      <p class="subtitle">Literatura de otimização de sistemas de abastecimento de água e bases oficiais utilizadas na modelagem.</p>
+    </div>
+    <div class="content">
+      <div class="card" style="padding:20px 26px;">
+        <ul class="math-list" style="gap:11px; font-size:13.5px;">
+          <li>• <strong>ARENALES, M. et al.</strong> <em>Pesquisa Operacional para Cursos de Engenharia</em>. 2. ed. Elsevier, 2015.</li>
+          <li>• <strong>MALA-JETMAROVA, H.; SULTANOVA, N.; SAVIC, D.</strong> Lost in optimisation of water distribution systems? <em>Environmental Modelling &amp; Software</em>, v. 93, 2017.</li>
+          <li>• <strong>MENKE, R. et al.</strong> Demonstrating demand response from water distribution system through pump scheduling. <em>Applied Energy</em>, v. 170, 2016.</li>
+          <li>• <strong>THOMAS, M.; SELA, L.</strong> A mixed-integer linear programming framework for optimization of water network operations problems. <em>Water Resources Research</em>, v. 60, 2024.</li>
+          <li>• <strong>BRASIL. Ministério das Cidades (SINISA 2024).</strong> Sistema Nacional de Informações sobre Saneamento — resultados 2024 (ano de referência 2023).</li>
+          <li>• <strong>SANTOS (SP). Prefeitura Municipal.</strong> Plano Municipal de Saneamento Básico (PMSB).</li>
+          <li>• <strong>Repositório do Projeto (Jupyter Notebooks e Benchmarks):</strong> <code>https://github.com/fbracale/PO-Otimizacao-ETA-2026</code></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer">
+      <span>USP – São Carlos – ICMC · Pesquisa Operacional · 2026</span>
+      <span class="page-num">18/19</span>
+    </div>
+  </section>
+
+  <!-- SLIDE 19: ENCERRAMENTO -->
+  <section class="slide cover">
+    <div style="display:flex; flex-direction:column; height:100%; justify-content:center; align-items:center; text-align:center; gap:18px;">
+      <div class="eyebrow" style="font-size:15px;">USP · ICMC · PESQUISA OPERACIONAL · 2026</div>
+      <h1 style="font-size:64px; font-weight:900; color:var(--navy); letter-spacing:-1px;">Obrigado!</h1>
+      <p style="font-size:19px; color:var(--slate); font-weight:600;">
+        Felipe de Mattos Bracale · Jheimis Fernandes Marques · Luciano Severino da Silva
+      </p>
+      <a href="https://github.com/fbracale/PO-Otimizacao-ETA-2026" target="_blank" rel="noopener noreferrer"
+         style="margin-top:14px; background:var(--white); border:1px solid #bae6fd; padding:12px 26px; border-radius:999px; font-size:16px; font-weight:700; color:var(--blue-dark); box-shadow:0 6px 20px rgba(0,102,153,0.1); display:inline-flex; align-items:center; gap:12px; text-decoration:none;">
+        <img src="../img/slides_22/icon_github.png" alt="GitHub" style="width:24px; height:24px; object-fit:contain;" />
+        <span>github.com/fbracale/PO-Otimizacao-ETA-2026</span>
+      </a>
+    </div>
+    <div class="footer">
+      <span>USP – São Carlos – ICMC · Pesquisa Operacional · 2026</span>
+      <span class="page-num">19/19</span>
+    </div>
+  </section>
+
+</div>
+
+<div class="nav-bar">
+  <button onclick="prevSlide()" title="Anterior (←)">◀</button>
+  <span class="counter" id="counter">01 / 19</span>
+  <button onclick="nextSlide()" title="Próximo (→)">▶</button>
+  <button onclick="toggleFullscreen()" title="Tela cheia (F)">⛶</button>
+  <button onclick="window.print()" title="Exportar PDF (Cmd+P)">PDF</button>
+</div>
+
+<script>
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const counter = document.getElementById('counter');
+  const deck = document.getElementById('deck');
+  let current = 0;
+
+  function showSlide(idx) {
+    current = (idx + slides.length) % slides.length;
+    slides.forEach((s, i) => s.classList.toggle('active', i === current));
+    counter.textContent = `${String(current + 1).padStart(2, '0')} / ${String(slides.length).padStart(2, '0')}`;
+  }
+  function nextSlide() { showSlide(current + 1); }
+  function prevSlide() { showSlide(current - 1); }
+
+  function scaleDeck() {
+    const scale = Math.min(window.innerWidth / 1280, window.innerHeight / 720) * 0.96;
+    deck.style.transform = `scale(${scale})`;
+  }
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+    else document.exitFullscreen();
+  }
+
+  window.addEventListener('resize', scaleDeck);
+  window.addEventListener('keydown', (e) => {
+    if (['ArrowRight', 'Space', 'PageDown'].includes(e.code)) { e.preventDefault(); nextSlide(); }
+    if (['ArrowLeft', 'PageUp'].includes(e.code)) { e.preventDefault(); prevSlide(); }
+    if (e.key === 'f' || e.key === 'F') toggleFullscreen();
+    if (e.key === 'Home') showSlide(0);
+    if (e.key === 'End') showSlide(slides.length - 1);
+  });
+
+  scaleDeck();
+  showSlide(0);
+</script>
+</body>
+</html>
